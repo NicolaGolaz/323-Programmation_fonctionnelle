@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks.Dataflow;
 using System.Globalization;
 using Microsoft.Extensions.Primitives;
+using System.Diagnostics;
 
 
 List<Product> products = new List<Product>
@@ -44,7 +45,8 @@ List<List<string>> productsTitle = new List<List<string>>
 };
 
 
-List<List<string>> products1 = products.Select(product => new List<string>
+
+    List<List<string>> products1 = products.Select(product => new List<string>
 {
 
     product.Producer.First() + (product.Producer.Count()-2).ToString() + product.Producer.Last(),
@@ -57,6 +59,7 @@ List<List<string>> products1 = products.Select(product => new List<string>
 
 
 }).ToList();
+
 
 // Affichage dans la console
 Console.WriteLine("{0,-10} {1,-15} {2,5} {3,15}", "Seller", "Product", "CA", "Stock");
@@ -78,6 +81,51 @@ using (var writer = new StreamWriter(filePath))
         writer.WriteLine(string.Join(";", row));
     }
 }
+
+static (long time, long memory) MesurePerf(Action action, int iterations = 1000)
+{
+    // Forcer le garbage collection avant mesure
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    GC.Collect();
+
+    var memoryBefore = GC.GetTotalMemory(false);
+    var stopwatch = Stopwatch.StartNew();
+
+    for (int i = 0; i < iterations; i++)
+    {
+        action();
+    }
+
+    stopwatch.Stop();
+    var memoryAfter = GC.GetTotalMemory(false);
+
+    long temps = stopwatch.ElapsedMilliseconds;
+    long memoire = memoryAfter - memoryBefore;
+
+    Console.WriteLine($"Temps : {temps} ms");
+    Console.WriteLine($"Mémoire utilisée : {memoire} octets");
+
+    return (stopwatch.ElapsedMilliseconds, memoryAfter - memoryBefore);
+}
+
+var test = MesurePerf(() =>
+{
+    List<List<string>> products1 = products.Select(product => new List<string>
+{
+
+    product.Producer.First() + (product.Producer.Count()-2).ToString() + product.Producer.Last(),
+    i18n[product.ProductName],
+    (product.Quantity*product.PricePerUnit).ToString(),
+
+    product.Quantity < 10 ? "Stock faible" :
+    product.Quantity <= 15 ? "Stock normal" :
+    "Stock élevé"
+
+
+}).ToList();
+}, iterations: 1);
+
 
 
 public class Product

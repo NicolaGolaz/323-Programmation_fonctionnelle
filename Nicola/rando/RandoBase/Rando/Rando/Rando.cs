@@ -57,6 +57,32 @@ namespace Rando
             {
                 DrawColoredTrack(g, _trackpoints, this.ClientSize.Width, this.ClientSize.Height);
             }
+
+            // calculer la distance 
+            var totalDistance = _trackpoints.Skip(1).Zip(_trackpoints, (curr, prev) => GetDistance(prev.Latitude, prev.Longitude, curr.Latitude, curr.Longitude)).Aggregate(0.0, (a, b) => a + b);
+            g.DrawString(Math.Round(totalDistance).ToString() + " mètre", new Font("Arial", 16), Brushes.Red, new PointF(50, 50));
+        }
+
+        
+
+        private static double GetDistance(double lat1, double lon1, double lat2, double lon2)
+        {
+            const double EarthRadiusKm = 6371.0;
+
+            // Conversion en radians directement
+            double dLat = (lat2 - lat1) * (Math.PI / 180.0);
+            double dLon = (lon2 - lon1) * (Math.PI / 180.0);
+
+            lat1 = lat1 * (Math.PI / 180.0);
+            lat2 = lat2 * (Math.PI / 180.0);
+
+            double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                       Math.Cos(lat1) * Math.Cos(lat2) *
+                       Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+
+            double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+
+            return EarthRadiusKm * c * 1000; // en mètres
         }
 
         private void DrawColoredTrack(Graphics g, List<Trackpoint> trackpoints, int width, int height)
